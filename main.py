@@ -1,5 +1,15 @@
 import random
 import random
+import pygame
+import sys
+import time
+
+pygame.init()
+
+width, height = 1000, 1000
+canvas = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Simple Canvas")
+
 
 def SelectWords(wordlst, count, size):
     if not isinstance(wordlst, list):
@@ -93,6 +103,7 @@ def InsertWords(grid, wordlist):
     return grid
 
 def InsertWordHorizontally(grid, word):
+    # word = word.upper()
     flip = random.randint(0, 4)
     if flip == 1:
         word = word[::-1]
@@ -115,6 +126,7 @@ def InsertWordHorizontally(grid, word):
 
 
 def InsertWordVertically(grid, word):
+   # word = word.upper()
     flip = random.randint(0, 4)
     if flip == 1:
         word = word[::-1]
@@ -140,6 +152,88 @@ def InsertWordVertically(grid, word):
 def BuildGrid(wordlist, size, count):
     grid = MakeGrid(size, size)
     words = SelectWords(wordlist, count, size)
+    print(words)
     grid = InsertWords(grid, words)
     grid = FillGrid(grid, words)
+    return grid
+
+
+
+def draw_grid(grid):
+    font = pygame.font.Font(None, 20)  # Smaller font size
+    rows = len(grid)
+    cols = len(grid[0]) if rows > 0 else 0
+
+    # Setting the size of the grid
+    grid_width = cols * 30  # Cell width (30 pixels)
+    grid_height = rows * 30  # Cell height (30 pixels)
+
+    # Calculate top-left position to center the grid
+    start_x = (width - grid_width) // 2
+    start_y = (height - grid_height) // 2
+
+    # Draw the outline of the grid
+    pygame.draw.rect(canvas, (255, 255, 255), (start_x, start_y, grid_width, grid_height), 2)  # White outline
+
+    # Draw letters in the grid
+    for row in range(rows):
+        for col in range(cols):
+            letter = grid[row][col]
+            
+            # Set the color based on uppercase or lowercase
+            if letter.isupper():
+                color = (0, 255, 0)  # Green for uppercase
+            else:
+                color = (255, 255, 255)  # White for lowercase
+            
+            text_surface = font.render(letter, True, color)  # Render with the selected color
+            
+            # Adjusting position for the text to be center-aligned with minimal padding
+            text_rect = text_surface.get_rect(center=(start_x + col * 30 + 15, start_y + row * 30 + 15))  # Centered with 15px padding
+            canvas.blit(text_surface, text_rect)
+
+def mark_word(grid, word, start_row, start_col, direction):
+    """Check if a word can be marked from the start position in a specific direction."""
+    delta_row, delta_col = direction
+    word_length = len(word)
+    positions = []
+
+    for i in range(word_length):
+        row = start_row + delta_row * i
+        col = start_col + delta_col * i
+        
+        # Check if the current position is within the grid boundaries
+        if row < 0 or row >= len(grid) or col < 0 or col >= len(grid[0]) or grid[row][col] != word[i]:
+            return False, []
+
+        positions.append((row, col))
+
+    return True, positions
+
+def fill_grid(grid, wordlist):
+    """Fill the grid with capitalized words found from the wordlist."""
+    if not isinstance(grid, list) or not all(isinstance(row, list) for row in grid) or len(grid) == 0:
+        return "Error; Input is not a valid grid."
+
+    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # right, down, left, up
+    for i in range(len(grid)):
+        for j in range(len(grid[i])):
+            if grid[i][j].islower():  # Only check lowercase letters
+                for word in wordlist:
+                    if grid[i][j] == word[0]:  # Check if the first character matches
+                        # Attempt to mark the word without changing the grid yet.
+                        success = False
+                        for direction in directions:
+                            found, positions = mark_word(grid, word, i, j, direction)
+                            if found:
+                                # If the word is found, capitalize the letters.
+                                for pos in positions:
+                                    grid[pos[0]][pos[1]] = grid[pos[0]][pos[1]].upper()
+                                success = True
+                                break
+                        
+                        if not success:
+                            # If we failed to find the word, we revert the first letter back to lowercase.
+                            grid[i][j] = grid[i][j].lower()
+                            
     return grid
