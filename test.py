@@ -20,13 +20,15 @@ grid = FillGrid(grid, words)
 for row in grid:
     print(row)'''
 
-def Start(wordlist):
+def StartCanvas(wordlist, seed=None):
     running = True
     BLACK = pygame.Color('black')
+    if not seed == None:
+        pygame.display.set_caption("Grid :" + str(seed))
 
     while running:
         # Generate the grid for the current loop
-        grid = BuildGrid(wordlist, 15, 5)  
+        grid = BuildGrid(wordlist, 10, 6, seed)  
         canvas.fill(BLACK)
         draw_grid(grid)
         for row in grid:
@@ -47,7 +49,7 @@ def Start(wordlist):
                         waiting_for_space = False  # Exit the inner loop on space press
 
         # Now we'll reveal the answer
-        grid = fill_grid(grid, wordlist)  # Fill the grid with answers
+        words = fill_grid(grid, wordlist)  # Fill the grid with answers
         canvas.fill(BLACK)
         draw_grid(grid)
         for row in grid:
@@ -56,5 +58,29 @@ def Start(wordlist):
         pygame.time.delay(3000)
 
 
-Start(wordlist)
+def MakeHTML(wordlist, seed=None):
+    grid = BuildGrid(wordlist, 10, 6, seed)
+    
+    emptygrid = []
+    for row in grid:
+        emptyrow = []
+        for item in row:
+            emptyrow.append(item)
+        emptygrid.append(emptyrow)
+            
+    words = fill_grid(grid, wordlist)
+    for row in grid:
+        print(row)
+    for row in emptygrid:
+        print(row)
+    if not seed == None:
+        generate_html_grids(emptygrid, grid, words, seed)
+    else:
+        generate_html_grids(emptygrid, grid, words)
+             
+
+
+#StartCanvas(wordlist)
+
+MakeHTML(wordlist, 5)
 

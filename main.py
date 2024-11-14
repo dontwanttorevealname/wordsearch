@@ -149,7 +149,8 @@ def InsertWordVertically(grid, word):
     return grid
 
 
-def BuildGrid(wordlist, size, count):
+def BuildGrid(wordlist, size, count, seed=None):
+    random.seed(seed)
     grid = MakeGrid(size, size)
     words = SelectWords(wordlist, count, size)
     print(words)
@@ -192,6 +193,87 @@ def draw_grid(grid):
             text_rect = text_surface.get_rect(center=(start_x + col * 30 + 15, start_y + row * 30 + 15))  # Centered with 15px padding
             canvas.blit(text_surface, text_rect)
 
+def generate_html_grids(grid1, grid2, word_list, output_file=0):
+    output_file = "grids" + str(output_file) + ".html"
+    solved_file = str(output_file) + "_solved.html"
+
+    # Define CSS style for the grids
+    styles = """
+    <style>
+        .grid {
+            display: inline-block;
+            border: 2px solid black;
+            margin: 20px;
+        }
+        .cell {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            border: 1px solid lightgray;
+            line-height: 30px; /* Center text vertically */
+            font-size: 20px;  /* Adjust font size */
+        }
+        .capital {
+            color: green;     /* Color for capital letters */
+        }
+        .word-list {
+            margin: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+    """
+
+    # Start the HTML document for the first grid
+    html_content = f"<!DOCTYPE html>\n<html>\n<head>\n<title>Grid Display</title>\n{styles}\n</head>\n<body>\n"
+    
+    # Function to create a grid's HTML representation
+    def create_grid_html(grid):
+        grid_html = '<div class="grid">'
+        for row in grid:
+            grid_html += '<div>'
+            for cell in row:
+                cell_class = 'capital' if cell.isupper() else ''
+                grid_html += f'<div class="cell {cell_class}">{cell}</div>'
+            grid_html += '</div>'
+        grid_html += '</div>'
+        return grid_html
+
+    # Add the first grid to the HTML content
+    html_content += "<h2>Grid 1</h2>\n"
+    html_content += create_grid_html(grid1)
+
+    # Add the word list to the HTML content
+    html_content += "<div class='word-list'>Word List:<br>" + "<br>".join(word_list) + "</div>"
+
+    # Link to the second grid
+    html_content += f"<a href='{solved_file}'>View Answer Grid</a>"
+
+    # Close the HTML document for the first grid
+    html_content += "</body>\n</html>"
+
+    # Write the content to the output HTML file
+    with open(output_file, "w") as file:
+        file.write(html_content)
+
+    # Start the HTML document for the second grid
+    solved_html_content = f"<!DOCTYPE html>\n<html>\n<head>\n<title>Solved Grid Display</title>\n{styles}\n</head>\n<body>\n"
+
+    # Add the second grid to the solved HTML content
+    solved_html_content += "<h2>Grid 2</h2>\n"
+    solved_html_content += create_grid_html(grid2)
+
+    # Close the HTML document for the solved grid
+    solved_html_content += "</body>\n</html>"
+
+    # Write the content to the second output HTML file
+    with open(solved_file, "w") as file:
+        file.write(solved_html_content)
+
+    print(f"HTML files '{output_file}' and '{solved_file}' have been generated.")
+
+
 def mark_word(grid, word, start_row, start_col, direction):
     """Check if a word can be marked from the start position in a specific direction."""
     delta_row, delta_col = direction
@@ -211,11 +293,13 @@ def mark_word(grid, word, start_row, start_col, direction):
     return True, positions
 
 def fill_grid(grid, wordlist):
-    """Fill the grid with capitalized words found from the wordlist."""
+    """Fill the grid with capitalized words found from the wordlist and return a list of found words."""
     if not isinstance(grid, list) or not all(isinstance(row, list) for row in grid) or len(grid) == 0:
         return "Error; Input is not a valid grid."
-
+    
+    found_words = []  # List to store found words
     directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # right, down, left, up
+    
     for i in range(len(grid)):
         for j in range(len(grid[i])):
             if grid[i][j].islower():  # Only check lowercase letters
@@ -226,9 +310,10 @@ def fill_grid(grid, wordlist):
                         for direction in directions:
                             found, positions = mark_word(grid, word, i, j, direction)
                             if found:
-                                # If the word is found, capitalize the letters.
+                                # If the word is found, capitalize the letters and add word to the list.
                                 for pos in positions:
                                     grid[pos[0]][pos[1]] = grid[pos[0]][pos[1]].upper()
+                                found_words.append(word)  # Add the found word to the list
                                 success = True
                                 break
                         
@@ -236,4 +321,4 @@ def fill_grid(grid, wordlist):
                             # If we failed to find the word, we revert the first letter back to lowercase.
                             grid[i][j] = grid[i][j].lower()
                             
-    return grid
+    return found_words
