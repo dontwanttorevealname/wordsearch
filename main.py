@@ -193,6 +193,7 @@ def draw_grid(grid):
             text_rect = text_surface.get_rect(center=(start_x + col * 30 + 15, start_y + row * 30 + 15))  # Centered with 15px padding
             canvas.blit(text_surface, text_rect)
 
+
 def generate_html_grids(grid1, grid2, word_list, output_file=0):
     output_file = "grids" + str(output_file) + ".html"
     solved_file = str(output_file) + "_solved.html"
@@ -322,3 +323,19 @@ def fill_grid(grid, wordlist):
                             grid[i][j] = grid[i][j].lower()
                             
     return found_words
+
+
+def draw_found_words(found_words, grid):
+    font = pygame.font.Font(None, 25)  # Larger font size for found words
+    # Create and render the found words text
+    found_words_text = "Found Words: " + ", ".join(found_words)
+    text_surface = font.render(found_words_text, True, (255, 255, 255))
+
+    # Calculate position for the text to be just below the grid
+    rows = len(grid)
+    grid_height = rows * 30  # Cell height (30 pixels)
+    text_y_position = (height - grid_height) // 2 + grid_height + 10  # 10 pixels below the grid
+
+    # Center the text below the grid
+    text_rect = text_surface.get_rect(center=(width // 2, text_y_position))
+    canvas.blit(text_surface, text_rect)

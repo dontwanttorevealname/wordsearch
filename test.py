@@ -23,14 +23,19 @@ for row in grid:
 def StartCanvas(wordlist, seed=None):
     running = True
     BLACK = pygame.Color('black')
-    if not seed == None:
+    if seed is not None:
         pygame.display.set_caption("Grid :" + str(seed))
 
     while running:
         # Generate the grid for the current loop
-        grid = BuildGrid(wordlist, 10, 6, seed)  
+        grid = BuildGrid(wordlist, 10, 6, seed)
+        found_words = fill_grid(grid, wordlist)
+        for i in range(len(grid)):
+            for j in range(len(grid[i])):
+                grid[i][j] = grid[i][j].lower()  
         canvas.fill(BLACK)
         draw_grid(grid)
+        draw_found_words(found_words, grid)
         for row in grid:
             print(row)
         pygame.display.flip()
@@ -39,19 +44,38 @@ def StartCanvas(wordlist, seed=None):
         waiting_for_space = True
         while waiting_for_space:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:  # Check for the QUIT event
+                if event.type == pygame.QUIT:  # Handle quitting
                     running = False
                     waiting_for_space = False  # Exit the inner loop if quitting
 
                 # Check for the space key press
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        waiting_for_space = False  # Exit the inner loop on space press
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    waiting_for_space = False  # Exit the inner loop on space press
+
+                # Check for mouse click event
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_x, mouse_y = event.pos  # Get mouse position
+                    # Determine which grid cell was clicked
+                    cell_row = (mouse_y - (height - len(grid) * 30) // 2) // 30
+                    cell_col = (mouse_x - (width - len(grid[0]) * 30) // 2) // 30
+                    # Make sure the clicked cell is within the grid bounds
+                    if 0 <= cell_row < len(grid) and 0 <= cell_col < len(grid[0]):
+                        letter = grid[cell_row][cell_col]
+                        # If the letter is lowercase, transform it to uppercase
+                        if letter.islower():
+                            grid[cell_row][cell_col] = letter.upper()
+
+            # Redraw the grid after a click
+            canvas.fill(BLACK)
+            draw_grid(grid)
+            draw_found_words(found_words, grid)
+            pygame.display.flip()
 
         # Now we'll reveal the answer
         words = fill_grid(grid, wordlist)  # Fill the grid with answers
         canvas.fill(BLACK)
         draw_grid(grid)
+        draw_found_words(found_words, grid)
         for row in grid:
             print(row)
         pygame.display.flip()
@@ -80,7 +104,7 @@ def MakeHTML(wordlist, seed=None):
              
 
 
-#StartCanvas(wordlist)
+StartCanvas(wordlist, 6)
 
-MakeHTML(wordlist, 5)
+#MakeHTML(wordlist, 6)
 
