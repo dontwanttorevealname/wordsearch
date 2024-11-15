@@ -25,11 +25,16 @@ def StartCanvas(wordlist, seed=None):
     BLACK = pygame.Color('black')
     if seed is not None:
         pygame.display.set_caption("Grid :" + str(seed))
-
+    selected_letters = []
+    selected_cells = []
+    located_words = []
+    last_cell = ""
     while running:
         # Generate the grid for the current loop
         grid = BuildGrid(wordlist, 10, 6, seed)
         found_words = fill_grid(grid, wordlist)
+
+        
         for i in range(len(grid)):
             for j in range(len(grid[i])):
                 grid[i][j] = grid[i][j].lower()  
@@ -49,8 +54,9 @@ def StartCanvas(wordlist, seed=None):
                     waiting_for_space = False  # Exit the inner loop if quitting
 
                 # Check for the space key press
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                if set(word.lower() for word in located_words) == set(word.lower() for word in found_words):
                     waiting_for_space = False  # Exit the inner loop on space press
+                    located_words = []
 
                 # Check for mouse click event
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -61,9 +67,60 @@ def StartCanvas(wordlist, seed=None):
                     # Make sure the clicked cell is within the grid bounds
                     if 0 <= cell_row < len(grid) and 0 <= cell_col < len(grid[0]):
                         letter = grid[cell_row][cell_col]
+
                         # If the letter is lowercase, transform it to uppercase
                         if letter.islower():
+                            selected_cells.append((cell_row, cell_col))
+                            selected_letters.append(letter)
+                            filtered_words = found_words if not selected_letters else [
+                                word for word in found_words 
+                                if word.lower().startswith(''.join(selected_letters))
+                            ]
+
+                                            
+
                             grid[cell_row][cell_col] = letter.upper()
+
+                            if not filtered_words:
+                                for cell in selected_cells:
+                                    uprow, upcol = cell
+                                    grid[uprow][upcol] = grid[uprow][upcol].lower()
+                                selected_letters = []
+
+
+                            if selected_cells:
+                                last_cell = selected_cells[-1:]
+                                if len(selected_cells) >= 2:
+                                    second_last_cell = selected_cells[-2]
+                                    last_cell = selected_cells[-1]
+                                    # Calculate current differences
+                                    row_diff = last_cell[0] - second_last_cell[0]
+                                    col_diff = last_cell[1] - second_last_cell[1]
+                                        
+                                        # If we have 3 or more cells, compare directions
+                                    if len(selected_cells) >= 3:
+                                        third_last_cell = selected_cells[-3]
+                                        prev_row_diff = second_last_cell[0] - third_last_cell[0]
+                                        prev_col_diff = second_last_cell[1] - third_last_cell[1]
+                                            
+                                            # If direction changed, store the new direction
+                                        if (row_diff != prev_row_diff or col_diff != prev_col_diff):
+                                            for cell in selected_cells:
+                                                uprow, upcol = cell
+                                                grid[uprow][upcol] = grid[uprow][upcol].lower()
+                                            grid[cell_row][cell_col] = grid[cell_row][cell_col].lower()
+                                            selected_letters = []
+                                            selected_cells = []
+                            if filtered_words:  # Check if there are any filtered words
+                                if len(filtered_words) == 1:  # Check if there's exactly one word
+                                    current_word = filtered_words[0].upper()  # Get the single word and make it uppercase
+                                    selected_string = ''.join(selected_letters).upper()  # Join selected letters into string
+
+                                    if current_word == selected_string:
+                                        located_words.append(current_word)
+                                        selected_letters = []
+                                        if selected_cells:
+                                            selected_cells = []
 
             # Redraw the grid after a click
             canvas.fill(BLACK)
@@ -104,7 +161,7 @@ def MakeHTML(wordlist, seed=None):
              
 
 
-StartCanvas(wordlist, 6)
+StartCanvas(wordlist)
 
 #MakeHTML(wordlist, 6)
 
