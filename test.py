@@ -20,122 +20,125 @@ grid = FillGrid(grid, words)
 for row in grid:
     print(row)'''
 
+def handle_cell_selection(grid, cell_row, cell_col, selected_cells, selected_letters, found_words):
+    letter = grid[cell_row][cell_col]
+    
+    if not letter.islower():
+        return selected_cells, selected_letters
+        
+    selected_cells.append((cell_row, cell_col))
+    selected_letters.append(letter)
+    grid[cell_row][cell_col] = letter.upper()
+    
+    filtered_words = [word for word in found_words 
+                     if word.lower().startswith(''.join(selected_letters))]
+    
+    if not filtered_words:
+        reset_selected_cells(grid, selected_cells)
+        return [], []
+        
+    return selected_cells, selected_letters
+
+def check_direction_change(selected_cells, grid):
+    if len(selected_cells) >= 3:
+        last_cell = selected_cells[-1]
+        second_last_cell = selected_cells[-2]
+        third_last_cell = selected_cells[-3]
+        
+        row_diff = last_cell[0] - second_last_cell[0]
+        col_diff = last_cell[1] - second_last_cell[1]
+        prev_row_diff = second_last_cell[0] - third_last_cell[0]
+        prev_col_diff = second_last_cell[1] - third_last_cell[1]
+        
+        if (row_diff != prev_row_diff or col_diff != prev_col_diff):
+            reset_selected_cells(grid, selected_cells)
+            return True
+    return False
+
+def reset_selected_cells(grid, selected_cells):
+    for row, col in selected_cells:
+        grid[row][col] = grid[row][col].lower()
+
+def check_word_completion(filtered_words, selected_letters, selected_cells):
+    if not filtered_words:
+        return False, None
+        
+    if len(filtered_words) == 1:
+        current_word = filtered_words[0].upper()
+        selected_string = ''.join(selected_letters).upper()
+        
+        if current_word == selected_string:
+            return True, current_word
+    return False, None
+
+def handle_game_display(grid, found_words, canvas, BLACK):
+    canvas.fill(BLACK)
+    draw_grid(grid)
+    draw_found_words(found_words, grid)
+    pygame.display.flip()
+
 def StartCanvas(wordlist, seed=None):
     running = True
     BLACK = pygame.Color('black')
     if seed is not None:
         pygame.display.set_caption("Grid :" + str(seed))
+        
     selected_letters = []
     selected_cells = []
     located_words = []
-    last_cell = ""
+    
     while running:
-        # Generate the grid for the current loop
+        # Generate and initialize grid
         grid = BuildGrid(wordlist, 10, 6, seed)
         found_words = fill_grid(grid, wordlist)
-
+        grid = [[letter.lower() for letter in row] for row in grid]
         
-        for i in range(len(grid)):
-            for j in range(len(grid[i])):
-                grid[i][j] = grid[i][j].lower()  
-        canvas.fill(BLACK)
-        draw_grid(grid)
-        draw_found_words(found_words, grid)
-        for row in grid:
-            print(row)
-        pygame.display.flip()
+        # Initial draw
+        handle_game_display(grid, found_words, canvas, BLACK)
 
-        # Wait here until the space key is pressed
+        # Main game loop
         waiting_for_space = True
         while waiting_for_space:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:  # Handle quitting
-                    running = False
-                    waiting_for_space = False  # Exit the inner loop if quitting
-
-                # Check for the space key press
+                if event.type == pygame.QUIT:
+                    return  # Exit the function entirely
+                    
                 if set(word.lower() for word in located_words) == set(word.lower() for word in found_words):
-                    waiting_for_space = False  # Exit the inner loop on space press
+                    waiting_for_space = False
                     located_words = []
+                    break
 
-                # Check for mouse click event
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    mouse_x, mouse_y = event.pos  # Get mouse position
-                    # Determine which grid cell was clicked
+                    mouse_x, mouse_y = event.pos
                     cell_row = (mouse_y - (height - len(grid) * 30) // 2) // 30
                     cell_col = (mouse_x - (width - len(grid[0]) * 30) // 2) // 30
-                    # Make sure the clicked cell is within the grid bounds
+                    
                     if 0 <= cell_row < len(grid) and 0 <= cell_col < len(grid[0]):
-                        letter = grid[cell_row][cell_col]
+                        selected_cells, selected_letters = handle_cell_selection(
+                            grid, cell_row, cell_col, selected_cells, selected_letters, found_words
+                        )
+                        
+                        if selected_cells and check_direction_change(selected_cells, grid):
+                            selected_letters = []
+                            selected_cells = []
+                            
+                        filtered_words = [word for word in found_words 
+                                        if word.lower().startswith(''.join(selected_letters))]
+                        
+                        word_completed, current_word = check_word_completion(
+                            filtered_words, selected_letters, selected_cells
+                        )
+                        if word_completed:
+                            located_words.append(current_word)
+                            selected_letters = []
+                            selected_cells = []
+            
+            # Update display
+            handle_game_display(grid, found_words, canvas, BLACK)
 
-                        # If the letter is lowercase, transform it to uppercase
-                        if letter.islower():
-                            selected_cells.append((cell_row, cell_col))
-                            selected_letters.append(letter)
-                            filtered_words = found_words if not selected_letters else [
-                                word for word in found_words 
-                                if word.lower().startswith(''.join(selected_letters))
-                            ]
-
-                                            
-
-                            grid[cell_row][cell_col] = letter.upper()
-
-                            if not filtered_words:
-                                for cell in selected_cells:
-                                    uprow, upcol = cell
-                                    grid[uprow][upcol] = grid[uprow][upcol].lower()
-                                selected_letters = []
-
-
-                            if selected_cells:
-                                last_cell = selected_cells[-1:]
-                                if len(selected_cells) >= 2:
-                                    second_last_cell = selected_cells[-2]
-                                    last_cell = selected_cells[-1]
-                                    # Calculate current differences
-                                    row_diff = last_cell[0] - second_last_cell[0]
-                                    col_diff = last_cell[1] - second_last_cell[1]
-                                        
-                                        # If we have 3 or more cells, compare directions
-                                    if len(selected_cells) >= 3:
-                                        third_last_cell = selected_cells[-3]
-                                        prev_row_diff = second_last_cell[0] - third_last_cell[0]
-                                        prev_col_diff = second_last_cell[1] - third_last_cell[1]
-                                            
-                                            # If direction changed, store the new direction
-                                        if (row_diff != prev_row_diff or col_diff != prev_col_diff):
-                                            for cell in selected_cells:
-                                                uprow, upcol = cell
-                                                grid[uprow][upcol] = grid[uprow][upcol].lower()
-                                            grid[cell_row][cell_col] = grid[cell_row][cell_col].lower()
-                                            selected_letters = []
-                                            selected_cells = []
-                            if filtered_words:  # Check if there are any filtered words
-                                if len(filtered_words) == 1:  # Check if there's exactly one word
-                                    current_word = filtered_words[0].upper()  # Get the single word and make it uppercase
-                                    selected_string = ''.join(selected_letters).upper()  # Join selected letters into string
-
-                                    if current_word == selected_string:
-                                        located_words.append(current_word)
-                                        selected_letters = []
-                                        if selected_cells:
-                                            selected_cells = []
-
-            # Redraw the grid after a click
-            canvas.fill(BLACK)
-            draw_grid(grid)
-            draw_found_words(found_words, grid)
-            pygame.display.flip()
-
-        # Now we'll reveal the answer
-        words = fill_grid(grid, wordlist)  # Fill the grid with answers
-        canvas.fill(BLACK)
-        draw_grid(grid)
-        draw_found_words(found_words, grid)
-        for row in grid:
-            print(row)
-        pygame.display.flip()
+        # Show answer and delay
+        words = fill_grid(grid, wordlist)
+        handle_game_display(grid, found_words, canvas, BLACK)
         pygame.time.delay(3000)
 
 
@@ -159,6 +162,7 @@ def MakeHTML(wordlist, seed=None):
     else:
         generate_html_grids(emptygrid, grid, words)
              
+
 
 
 StartCanvas(wordlist)
